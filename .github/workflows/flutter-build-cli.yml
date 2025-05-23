@@ -1,0 +1,267 @@
+name: Build Flutter with CLI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, cli-feature ]
+    paths:
+      - 'build.py'
+      - '.github/workflows/flutter-build-cli.yml'
+
+env:
+  CARGO_NDK_VERSION: "3.1.2"
+  LLVM_VERSION: "15.0.6"
+  FLUTTER_VERSION: "3.19.6"
+  RUST_VERSION: "1.75.0"
+  FLUTTER_RUST_BRIDGE_VERSION: "1.80.1"
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+  CARGO_INCREMENTAL: 0
+  RUSTFLAGS: "-C debuginfo=1"
+
+jobs:
+  build-windows-cli:
+    name: Build Windows with CLI
+    runs-on: windows-2022
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: x86_64-pc-windows-msvc
+          components: rustfmt
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Setup vcpkg with GitHub Actions binary cache
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: C:\vcpkg
+          vcpkgGitCommitId: '501db0f17ef6df184fcdbfbe0f87cde2313b6ab1'
+
+      - name: Install vcpkg dependencies
+        run: |
+          $VCPKG_ROOT/vcpkg install --triplet x64-windows-static --x-install-root="$VCPKG_ROOT/installed"
+        shell: bash
+
+      - name: Build rustdesk with CLI
+        shell: cmd
+        run: |
+          python3 build.py --portable --hwcodec --flutter --vram --cli --skip-portable-pack
+          
+      - name: Sign rustdesk.exe
+        shell: cmd
+        run: |
+          echo "Signing would happen here in production"
+
+      - name: Create portable package
+        shell: powershell
+        run: |
+          $version = (Get-Content Cargo.toml | Select-String -Pattern 'version = "(.+)"').Matches[0].Groups[1].Value
+          New-Item -ItemType Directory -Path "rustdesk-cli-$version-windows" -Force
+          
+          # Copy main executable
+          Copy-Item "target/release/rustdesk.exe" -Destination "rustdesk-cli-$version-windows/"
+          
+          # Copy Flutter build files
+          Copy-Item -Path "flutter/build/windows/x64/runner/Release/*" -Destination "rustdesk-cli-$version-windows/" -Recurse
+          
+          # Create a simple README
+          @"
+RustDesk with CLI Support
+========================
+
+This build includes command-line interface (CLI) support.
+
+CLI Usage Examples:
+------------------
+
+1. Port Forwarding:
+   rustdesk.exe --port-forward=<REMOTE_ID>:<LOCAL_PORT>:<REMOTE_PORT>[:<REMOTE_HOST>]
+   
+   Example: Forward SSH from remote to local port 2222
+   rustdesk.exe --port-forward=123456789:2222:22
+
+2. Direct Connection:
+   rustdesk.exe --connect <REMOTE_ID>
+
+3. File Transfer:
+   rustdesk.exe --file-transfer <REMOTE_ID>
+
+Note: This is an experimental build with CLI features enabled.
+"@ | Out-File -FilePath "rustdesk-cli-$version-windows/README-CLI.txt" -Encoding UTF8
+
+          # Create ZIP archive
+          Compress-Archive -Path "rustdesk-cli-$version-windows" -DestinationPath "rustdesk-cli-$version-windows.zip"
+
+      - name: Upload Windows CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustdesk-windows-cli
+          path: rustdesk-cli-*.zip
+
+  build-linux-cli:
+    name: Build Linux with CLI
+    runs-on: ubuntu-20.04
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: x86_64-unknown-linux-gnu
+          components: rustfmt
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake curl gcc git g++ libappindicator3-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libgtk-3-dev libpulse-dev libva-dev libvdpau-dev \
+            libxcb-randr0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+            libxdo-dev libxfixes-dev ninja-build pkg-config \
+            python3 python3-pip rpm libayatana-appindicator3-dev \
+            libasound2-dev libpam0g-dev
+          
+      - name: Build rustdesk with CLI
+        run: |
+          python3 build.py --flutter --hwcodec --cli
+
+      - name: Create package
+        run: |
+          version=$(grep '^version' Cargo.toml | head -1 | awk -F'"' '{print $2}')
+          mkdir -p "rustdesk-cli-$version-linux"
+          
+          # Copy files
+          cp target/release/rustdesk "rustdesk-cli-$version-linux/"
+          cp -r flutter/build/linux/x64/release/bundle/* "rustdesk-cli-$version-linux/"
+          
+          # Create README
+          cat > "rustdesk-cli-$version-linux/README-CLI.txt" << 'EOF'
+RustDesk with CLI Support
+========================
+
+This build includes command-line interface (CLI) support.
+
+CLI Usage Examples:
+------------------
+
+1. Port Forwarding:
+   ./rustdesk --port-forward=<REMOTE_ID>:<LOCAL_PORT>:<REMOTE_PORT>[:<REMOTE_HOST>]
+   
+   Example: Forward SSH from remote to local port 2222
+   ./rustdesk --port-forward=123456789:2222:22
+
+2. Direct Connection:
+   ./rustdesk --connect <REMOTE_ID>
+
+3. File Transfer:
+   ./rustdesk --file-transfer <REMOTE_ID>
+
+Note: This is an experimental build with CLI features enabled.
+EOF
+          
+          # Create tarball
+          tar czf "rustdesk-cli-$version-linux.tar.gz" "rustdesk-cli-$version-linux"
+
+      - name: Upload Linux CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustdesk-linux-cli
+          path: rustdesk-cli-*.tar.gz
+
+  build-macos-cli:
+    name: Build macOS with CLI
+    runs-on: macos-13
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: x86_64-apple-darwin,aarch64-apple-darwin
+          components: rustfmt
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          brew install create-dmg
+
+      - name: Build rustdesk with CLI
+        run: |
+          python3 build.py --flutter --hwcodec --cli
+
+      - name: Create package
+        run: |
+          version=$(grep '^version' Cargo.toml | head -1 | awk -F'"' '{print $2}')
+          mkdir -p "rustdesk-cli-$version-macos"
+          
+          # Copy app bundle
+          cp -R flutter/build/macos/Build/Products/Release/RustDesk.app "rustdesk-cli-$version-macos/"
+          
+          # Create README
+          cat > "rustdesk-cli-$version-macos/README-CLI.txt" << 'EOF'
+RustDesk with CLI Support
+========================
+
+This build includes command-line interface (CLI) support.
+
+CLI Usage Examples:
+------------------
+
+1. Port Forwarding:
+   ./RustDesk.app/Contents/MacOS/RustDesk --port-forward=<REMOTE_ID>:<LOCAL_PORT>:<REMOTE_PORT>[:<REMOTE_HOST>]
+   
+   Example: Forward SSH from remote to local port 2222
+   ./RustDesk.app/Contents/MacOS/RustDesk --port-forward=123456789:2222:22
+
+2. Direct Connection:
+   ./RustDesk.app/Contents/MacOS/RustDesk --connect <REMOTE_ID>
+
+3. File Transfer:
+   ./RustDesk.app/Contents/MacOS/RustDesk --file-transfer <REMOTE_ID>
+
+Note: This is an experimental build with CLI features enabled.
+EOF
+          
+          # Create DMG
+          create-dmg \
+            --volname "RustDesk CLI $version" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --app-drop-link 450 125 \
+            --hide-extension RustDesk.app \
+            "rustdesk-cli-$version-macos.dmg" \
+            "rustdesk-cli-$version-macos/"
+
+      - name: Upload macOS CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustdesk-macos-cli
+          path: rustdesk-cli-*.dmg

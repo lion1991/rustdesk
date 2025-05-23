@@ -130,6 +130,11 @@ def make_parser():
         help='Build with unix file copy paste feature'
     )
     parser.add_argument(
+        '--cli',
+        action='store_true',
+        help='Enable CLI features for command line support'
+    )
+    parser.add_argument(
         '--skip-cargo',
         action='store_true',
         help='Skip cargo build process, only flutter version + Linux supported currently'
@@ -281,6 +286,8 @@ def get_features(args):
         features.append('flutter')
     if args.unix_file_copy_paste:
         features.append('unix-file-copy-paste')
+    if args.cli:
+        features.append('cli')
     if osx:
         if args.screencapturekit:
             features.append('screencapturekit')
