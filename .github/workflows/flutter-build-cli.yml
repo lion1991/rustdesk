@@ -156,28 +156,28 @@ jobs:
           
           # Create README
           cat > "rustdesk-cli-$version-linux/README-CLI.txt" << 'EOF'
-RustDesk with CLI Support
-========================
-
-This build includes command-line interface (CLI) support.
-
-CLI Usage Examples:
-------------------
-
-1. Port Forwarding:
-   ./rustdesk --port-forward=<REMOTE_ID>:<LOCAL_PORT>:<REMOTE_PORT>[:<REMOTE_HOST>]
-   
-   Example: Forward SSH from remote to local port 2222
-   ./rustdesk --port-forward=123456789:2222:22
-
-2. Direct Connection:
-   ./rustdesk --connect <REMOTE_ID>
-
-3. File Transfer:
-   ./rustdesk --file-transfer <REMOTE_ID>
-
-Note: This is an experimental build with CLI features enabled.
-EOF
+          RustDesk with CLI Support
+          ========================
+          
+          This build includes command-line interface (CLI) support.
+          
+          CLI Usage Examples:
+          ------------------
+          
+          1. Port Forwarding:
+             ./rustdesk --port-forward=<REMOTE_ID>:<LOCAL_PORT>:<REMOTE_PORT>[:<REMOTE_HOST>]
+             
+             Example: Forward SSH from remote to local port 2222
+             ./rustdesk --port-forward=123456789:2222:22
+          
+          2. Direct Connection:
+             ./rustdesk --connect <REMOTE_ID>
+          
+          3. File Transfer:
+             ./rustdesk --file-transfer <REMOTE_ID>
+          
+          Note: This is an experimental build with CLI features enabled.
+          EOF
           
           # Create tarball
           tar czf "rustdesk-cli-$version-linux.tar.gz" "rustdesk-cli-$version-linux"
@@ -227,28 +227,28 @@ EOF
           
           # Create README
           cat > "rustdesk-cli-$version-macos/README-CLI.txt" << 'EOF'
-RustDesk with CLI Support
-========================
-
-This build includes command-line interface (CLI) support.
-
-CLI Usage Examples:
-------------------
-
-1. Port Forwarding:
-   ./RustDesk.app/Contents/MacOS/RustDesk --port-forward=<REMOTE_ID>:<LOCAL_PORT>:<REMOTE_PORT>[:<REMOTE_HOST>]
-   
-   Example: Forward SSH from remote to local port 2222
-   ./RustDesk.app/Contents/MacOS/RustDesk --port-forward=123456789:2222:22
-
-2. Direct Connection:
-   ./RustDesk.app/Contents/MacOS/RustDesk --connect <REMOTE_ID>
-
-3. File Transfer:
-   ./RustDesk.app/Contents/MacOS/RustDesk --file-transfer <REMOTE_ID>
-
-Note: This is an experimental build with CLI features enabled.
-EOF
+          RustDesk with CLI Support
+          ========================
+          
+          This build includes command-line interface (CLI) support.
+          
+          CLI Usage Examples:
+          ------------------
+          
+          1. Port Forwarding:
+             ./RustDesk.app/Contents/MacOS/RustDesk --port-forward=<REMOTE_ID>:<LOCAL_PORT>:<REMOTE_PORT>[:<REMOTE_HOST>]
+             
+             Example: Forward SSH from remote to local port 2222
+             ./RustDesk.app/Contents/MacOS/RustDesk --port-forward=123456789:2222:22
+          
+          2. Direct Connection:
+             ./RustDesk.app/Contents/MacOS/RustDesk --connect <REMOTE_ID>
+          
+          3. File Transfer:
+             ./RustDesk.app/Contents/MacOS/RustDesk --file-transfer <REMOTE_ID>
+          
+          Note: This is an experimental build with CLI features enabled.
+          EOF
           
           # Create DMG
           create-dmg \
