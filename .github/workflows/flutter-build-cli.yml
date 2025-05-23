@@ -3,7 +3,7 @@ name: Build Flutter with CLI
 on:
   workflow_dispatch:
   push:
-    branches: [ main, cli-feature ]
+    branches: [ master, main, cli-feature ]
     paths:
       - 'build.py'
       - '.github/workflows/flutter-build-cli.yml'
@@ -74,29 +74,30 @@ jobs:
           Copy-Item -Path "flutter/build/windows/x64/runner/Release/*" -Destination "rustdesk-cli-$version-windows/" -Recurse
           
           # Create a simple README
-          @"
-RustDesk with CLI Support
-========================
-
-This build includes command-line interface (CLI) support.
-
-CLI Usage Examples:
-------------------
-
-1. Port Forwarding:
-   rustdesk.exe --port-forward=<REMOTE_ID>:<LOCAL_PORT>:<REMOTE_PORT>[:<REMOTE_HOST>]
-   
-   Example: Forward SSH from remote to local port 2222
-   rustdesk.exe --port-forward=123456789:2222:22
-
-2. Direct Connection:
-   rustdesk.exe --connect <REMOTE_ID>
-
-3. File Transfer:
-   rustdesk.exe --file-transfer <REMOTE_ID>
-
-Note: This is an experimental build with CLI features enabled.
-"@ | Out-File -FilePath "rustdesk-cli-$version-windows/README-CLI.txt" -Encoding UTF8
+          $readmeContent = @"
+          RustDesk with CLI Support
+          ========================
+          
+          This build includes command-line interface (CLI) support.
+          
+          CLI Usage Examples:
+          ------------------
+          
+          1. Port Forwarding:
+             rustdesk.exe --port-forward=<REMOTE_ID>:<LOCAL_PORT>:<REMOTE_PORT>[:<REMOTE_HOST>]
+             
+             Example: Forward SSH from remote to local port 2222
+             rustdesk.exe --port-forward=123456789:2222:22
+          
+          2. Direct Connection:
+             rustdesk.exe --connect <REMOTE_ID>
+          
+          3. File Transfer:
+             rustdesk.exe --file-transfer <REMOTE_ID>
+          
+          Note: This is an experimental build with CLI features enabled.
+          "@
+          $readmeContent | Out-File -FilePath "rustdesk-cli-$version-windows/README-CLI.txt" -Encoding UTF8
 
           # Create ZIP archive
           Compress-Archive -Path "rustdesk-cli-$version-windows" -DestinationPath "rustdesk-cli-$version-windows.zip"
